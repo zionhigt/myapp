@@ -147,13 +147,15 @@ class Server:
 
     def parse_request(self, chunk):
         str_chunk = chunk.decode()
-        items = str_chunk.split()
+        headers, body = str_chunk.split("\r\n\r\n")
+        items = headers.split()
         verb, route, proto, *options = items
         return {
             "verb": verb,
             "route": route,
             "proto": proto,
-            "options": options
+            "options": options,
+            "body": body
         }
 
 server = Server.get_instance(host="localhost", port=1337, app=app(Api()))
