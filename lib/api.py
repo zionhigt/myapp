@@ -21,7 +21,7 @@ class Api:
         
         def exposer(req, res):
             file_path = path.join(_path, path.relpath(req.route, alias))
-            return res.sendfile(file_path)
+            return res.with_status(200).sendfile(file_path)
         
         for file in scandir(_path):
             aliased_path = path.join(alias, file.name)
