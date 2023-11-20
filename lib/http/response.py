@@ -10,8 +10,9 @@ DEFAULT_HTTP = {
     '__head__': "HTTP/1.1 %s %s\r\n",
     '__header__': {
         'Content-Type': "text/html",
-        "Host": "localhost",
-        'Access-Control-Allow-Origin': '*'
+        "Host": "localhost:1337",
+        'Access-Control-Allow-Origin': '*',
+        "Connection": "Keep-Alive"
     }
 } 
 
@@ -61,7 +62,7 @@ class Response:
             for key in header:
                 value = header.get(key)
                 _header.append(f"{key}: {value}")
-            _header = "\n".join(_header)
+            _header = "\r\n".join(_header)
         return _header.encode() + b'\r\n\r\n'
     
     @property
@@ -86,7 +87,9 @@ class Response:
     def sendall(self, content):
         if content and isinstance(content, str):
             content = content.encode()
-        res = self.head + self.header + content
+        res = self.head + self.header + content + b'\r\n'
+        if self._status is None:
+            self.status = 200
         self.client.send(res)
         self.client.close()
     
