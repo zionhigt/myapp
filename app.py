@@ -5,7 +5,15 @@ def app(api=None):
                 self.api = api
                 self.api.expose("./public", "/")
 
-            
+            @api.post("/data")
+            def data(req, res):
+                if getattr(req, 'body', None) is not None:
+                    print(req.body)
+                res.with_status(201).sendjson({
+                    "data-receive": req.body
+                })
+
+
             @api.get(["/public", "/public/:user"])
             @api.middleware("security.auth.check_user")
             def public(req, res):
