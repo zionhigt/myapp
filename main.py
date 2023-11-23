@@ -1,7 +1,9 @@
 from socket import socket, AF_INET, SOCK_STREAM
 
 from lib.http.response import Response
+
 from lib.http.request import Request
+Request = Request.get_instance
 
 from lib.api import Api
 from app import app
@@ -71,11 +73,11 @@ class Server:
             else:
                 raise e
         
-    def __init__(self, host, port, app, config={}):
+    def __init__(self, host, port, app, config={}, *args, **kwargs):
         self.host = host
         self.port = port
         self.app = app
-        self._max_size_request = config.get("max_size_request")
+        self._max_size_request = getattr(config, "max_size_request", None)
         self._server = socket(AF_INET, SOCK_STREAM)
         self._server.bind((self.host, self.port))
         self._controllers = {
@@ -142,13 +144,17 @@ class Server:
                     else:
                         break
                 if len(chunk):
-                    request = Request(**self.parse_request(chunk))
                     response = Response(client)
-                    controller = self.dispatch(request)
-                    if controller is not None:
-                        controller(req=request, res=response)
+                    request = Request(chunk)
+                    if request is not None:
+                        controller = self.dispatch(request)
+                        if controller is not None:
+                            controller(req=request, res=response)
+                        else:
+                            response.not_found()
                     else:
-                        response.not_found()
+                        response.bad_request()
+
 
             except OSError:
                 continue
@@ -156,21 +162,6 @@ class Server:
                 break
         self._server.close()
 
-    def parse_request(self, chunk):
-        decomposed = chunk.decode().split("\r\n\r\n")
-        body = ""
-        headers = decomposed[0]
-        if len(decomposed) > 1:
-            body = decomposed[1:]
-        items = headers.split()
-        verb, route, proto, *options = items
-        return {
-            "verb": verb,
-            "route": route,
-            "proto": proto,
-            "options": options,
-            "body": body
-        }
 
 server = Server.get_instance(
     host="localhost",

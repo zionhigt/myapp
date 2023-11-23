@@ -2,6 +2,32 @@ from urllib.parse import urlparse, parse_qs, urlsplit
 
 
 class Request:
+
+    @staticmethod
+    def get_instance(*args, **kwargs):
+        chunk = args[0]
+        if len(args) > 1:
+            chunk = kwargs.get("chunk")
+        if chunk is not None:
+            return Request(**Request.parse_chunk(chunk))
+
+    @staticmethod
+    def parse_chunk(chunk):
+        decomposed = chunk.decode().split("\r\n\r\n")
+        body = ""
+        headers = decomposed[0]
+        if len(decomposed) > 1:
+            body = decomposed[1:]
+        items = headers.split()
+        verb, route, proto, *options = items
+        return {
+            "verb": verb,
+            "route": route,
+            "proto": proto,
+            "options": options,
+            "body": body
+        }
+    
     def __init__(self, verb, route, proto, options, body):
         self.verb = verb
         self.route, self._params, self.query = self.parse_uri(route)
