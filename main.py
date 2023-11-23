@@ -6,6 +6,8 @@ from lib.http.request import Request
 from lib.api import Api
 from app import app
 
+import config
+
 
 class Controller:
         
@@ -170,7 +172,13 @@ class Server:
             "body": body
         }
 
-server = Server.get_instance(host="localhost", port=1337, app=app(Api()), force_port=True)
+server = Server.get_instance(
+    host="localhost",
+    port=1337,
+    app=app(Api()),
+    force_port=True,
+    config=config
+)
 server.listen()
 
 
