@@ -60,17 +60,20 @@ class Server:
             return Server(**kwargs)
         except OSError as e:
             print(e)
-            print("Increment port")
-            kwargs.update({
-                "port": kwargs.get("port", 1337) + 1
-            })
-            return Server.get_instance(**kwargs)
+            if kwargs.get("force_port", False):
+                print("Increment port")
+                kwargs.update({
+                    "port": kwargs.get("port", 1337) + 1
+                })
+                return Server.get_instance(**kwargs)
+            else:
+                raise e
         
-    def __init__(self, host, port, app):
+    def __init__(self, host, port, app, config={}):
         self.host = host
         self.port = port
         self.app = app
-
+        self._max_size_request = config.get("max_size_request")
         self._server = socket(AF_INET, SOCK_STREAM)
         self._server.bind((self.host, self.port))
         self._controllers = {
@@ -85,6 +88,12 @@ class Server:
 
         self.init_api(app.api)
         self._controllers
+    
+    @property
+    def max_size_request(self):
+        if self._max_size_request is not None:
+            return self._max_size_request
+        return 20480000
     
     def _subcribe_controller(self, verb, route, controller):
         if self._controllers.get(verb.upper()) is not None:
@@ -119,8 +128,8 @@ class Server:
         while True:
             try:
                 client, origin = self._server.accept()
+                max_chunk = self.max_size_request
                 buffer_size = 2048
-                max_chunk = buffer_size * 1000 # Aprox 2MB
                 chunk = b''
                 while True:
                     _chunk = client.recv(buffer_size)
@@ -161,7 +170,7 @@ class Server:
             "body": body
         }
 
-server = Server.get_instance(host="localhost", port=1337, app=app(Api()))
+server = Server.get_instance(host="localhost", port=1337, app=app(Api()), force_port=True)
 server.listen()
 
 
