@@ -99,6 +99,9 @@ class Response:
             b'<center><strong>Not found</strong></center><center><small>Dev API v 0.0.1</small></center>'
         )
     
+    def bad_request(self):
+        return self.with_status(400).sendtext(b'')
+    
     def sendtext(self, content):
         self.content_type = "text/plain"
         self.sendall(content.encode())
