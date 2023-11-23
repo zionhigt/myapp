@@ -146,8 +146,11 @@ class Server:
         self._server.close()
 
     def parse_request(self, chunk):
-        str_chunk = chunk.decode()
-        headers, body = str_chunk.split("\r\n\r\n")
+        decomposed = chunk.decode().split("\r\n\r\n")
+        body = ""
+        headers = decomposed[0]
+        if len(decomposed) > 1:
+            body = decomposed[1:]
         items = headers.split()
         verb, route, proto, *options = items
         return {
