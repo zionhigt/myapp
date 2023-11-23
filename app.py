@@ -29,6 +29,6 @@ def app(api=None):
                             "id": user
                         }
                     }
-                return res.with_status(201).sendjson(data)
+                return res.with_status(200).sendjson(data)
             
         return Application(api)
