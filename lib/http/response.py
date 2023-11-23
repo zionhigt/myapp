@@ -7,7 +7,7 @@ from http_status import status_mapping
 
 
 DEFAULT_HTTP = {
-    '__head__': "HTTP/1.1 %s %s\r\n",
+    '__head__': "HTTP/1.1 %s\r\n",
     '__header__': {
         'Content-Type': "text/html",
         "Host": "localhost:1337",
@@ -36,8 +36,12 @@ class Response:
         return self.content_type
 
     @property
-    def status(self):
+    def status_text(self):
         return f'{self._status} {self._status_text}'
+    
+    @property
+    def status(self):
+        return self._status
     
     @status.setter
     def status(self, code):
@@ -51,7 +55,7 @@ class Response:
             raise BadStatusException()
         
         self._status = code
-        self._status_text = status_mapping.get(str(code))
+        self._status_text = status_mapping.get(str(code), "")
     
     @property
     def header(self):
@@ -70,10 +74,7 @@ class Response:
         head = ""
         _head = self.options.get("__head__")
         if _head is not None:
-            head = _head % (
-                    self._status,
-                    self._status_text,
-                )
+            head = _head % (self.status_text)
         return head.encode()
 
     def with_status(self, code):
@@ -88,7 +89,7 @@ class Response:
         if content and isinstance(content, str):
             content = content.encode()
         res = self.head + self.header + content + b'\r\n'
-        if self._status is None:
+        if self.status is None:
             self.status = 200
         self.client.send(res)
         self.client.close()
