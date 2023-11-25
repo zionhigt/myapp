@@ -3,7 +3,8 @@ from urllib.parse import urlparse, parse_qs, urlsplit
 
 from lib.parser import (
     form_data,
-    form_urlencoded as urlencoded
+    form_urlencoded as urlencoded,
+    raw_json
 )
 
 from lib.parser.options import fetch_options
@@ -74,10 +75,12 @@ class Request:
         return {
             "multipart/form-data": form_data.parser,
             "application/x-www-form-urlencoded": urlencoded.parser,
+            "application/json": raw_json.parser,
+            "text/plain": lambda x, *args, **kwargs: x,
         }
 
     def _parse_body(self):
-        return self.parsers.get(self.content_type, self.parsers["application/x-www-form-urlencoded"])
+        return self.parsers.get(self.content_type, self.parsers["text/plain"])
     
     def parse_body(self, body, options):
         if body is None:
