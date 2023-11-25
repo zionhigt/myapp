@@ -1,6 +1,15 @@
 from urllib.parse import urlparse, parse_qs, urlsplit
 
 
+from lib.parser import (
+    form_data,
+    form_urlencoded as urlencoded
+)
+
+from lib.parser.options import fetch_options
+
+
+
 class Request:
 
     @staticmethod
@@ -14,7 +23,7 @@ class Request:
     @staticmethod
     def parse_chunk(chunk):
         decomposed = chunk.decode().split("\r\n\r\n")
-        body = ""
+        body = None
         headers = decomposed[0]
         if len(decomposed) > 1:
             body = decomposed[1:]
@@ -32,53 +41,48 @@ class Request:
         self.verb = verb
         self.route, self._params, self.query = self.parse_uri(route)
         self.params = {}
-        print(self.route, self.query)
         self.proto = proto
-        self.options = self.fetch_options(options)
-        self.body = self.parse_body(self.options)
+        self.options = fetch_options(options)
+        self._content_type = self._get_content_type()
+        self.options.update({
+            "Content-Type": self._content_type,
+        })
+        self.body = self.parse_body(body, self.options)
 
-    def fetch_options(self, options):
-        if isinstance(options, list):
-            key = ""
-            _options = {}
-            value = []
-            for i, data in enumerate(options):
-                is_last_item = i == len(options) - 1
-                if data[-1] == ":" or is_last_item:
-                    ## Fixme : last value doesn't save
-                    if key:
-                        if _options.get(key) is not None:
-                            value = _options.get(key) + value
-                        if len(value) == 1:
-                            value = value[0]
-                        _options.update({key: value})
-                        value = []
-                    key = data[:-1]
-                else:
-                    value.append(data)
-        return _options
+    @property
+    def content_type(self):
+        if self._content_type:
+            content_type = self._content_type
+            if isinstance(content_type, list):
+                return content_type[0]
+            return content_type 
     
-    def parse_body(self, options):
-        body = {}
-        if options.get("Content-Disposition") is None:
-            return body
-        content = options.get("Content-Disposition")
+    def _get_content_type(self):
+        content_type = self.options.get("Content-Type")
+        if content_type is not None:
+            if isinstance(content_type, list):
+                content_type = "".join(content_type)
+            if ";" in content_type:
+                splited = content_type.split(";")
+                content_type = [i for i in splited if i]
+                if len(content_type) == 1:
+                    content_type = content_type[0]
+        return content_type
 
-        nxt_is_value = False
-        mem_key = ""
-        for row in content:
-            if row[:5] == "name=":
-                mem_key = row.replace('name="', "").replace('"', "")
-                nxt_is_value = True
-                continue
-            if nxt_is_value:
-                body.update({
-                    mem_key: row
-                })
-                nxt_is_value = False
-                mem_key = ""
+    @property
+    def parsers(self):
+        return {
+            "multipart/form-data": form_data.parser,
+            "application/x-www-form-urlencoded": urlencoded.parser,
+        }
 
-        return body
+    def _parse_body(self):
+        return self.parsers.get(self.content_type, self.parsers["application/x-www-form-urlencoded"])
+    
+    def parse_body(self, body, options):
+        if body is None:
+            body = {}
+        return self._parse_body()(body, options)
 
     def bind_params(self, params):
         if not any([i[1][0] == ":" for i in params]):
@@ -93,6 +97,6 @@ class Request:
                     })
 
     def parse_uri(self, uri):
-        splited_url = list(enumerate(["/" if not i else i for i in uri.split("/")]))
         parsed_url = urlparse(uri)
+        splited_url = list(enumerate(["/" if not i else i for i in parsed_url.path.split("/")]))
         return (parsed_url.path, splited_url, parse_qs(parsed_url.query))
