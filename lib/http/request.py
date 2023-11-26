@@ -76,7 +76,7 @@ class Request:
             "multipart/form-data": form_data.parser,
             "application/x-www-form-urlencoded": urlencoded.parser,
             "application/json": raw_json.parser,
-            "text/plain": lambda x, *args, **kwargs: x,
+            "text/plain": lambda x, *args, **kwargs: b"".join(x).decode(),
         }
 
     def _parse_body(self):
