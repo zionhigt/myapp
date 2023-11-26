@@ -6,21 +6,21 @@ from http_status import status_mapping
 
 
 
-DEFAULT_HTTP = {
-    '__head__': "HTTP/1.1 %s\r\n",
-    '__header__': {
-        'Content-Type': "text/html",
-        "Host": "localhost:1337",
-        'Access-Control-Allow-Origin': '*',
-        "Connection": "Keep-Alive"
-    }
-} 
-
 
 class Response:
-    def __init__(self, client, options=DEFAULT_HTTP):
+    def __init__(self, client, options={}):
+        DEFAULT_HTTP = {
+            '__head__': "HTTP/1.1 %s\r\n",
+            '__header__': {
+                'Content-Type': "text/html",
+                "Host": "localhost:1337",
+                'Access-Control-Allow-Origin': '*',
+                "Connection": "Keep-Alive"
+            }
+        } 
         self.client = client
-        self.options = options
+        self.options = dict(DEFAULT_HTTP)
+        self.options.update(options)
         self._status = None
         self._status_text = ""
         self._content_type = "text/html"
@@ -128,7 +128,11 @@ class Response:
             
         except FileNotFoundError:
             return self.not_found()
-    
+        
+    def set_cookies(self, value):
+        value += " Path=/;"
+        self.options["__header__"]["Set-Cookie"] = value
+
     def redirect(self, route, perma=True):
         status_code = 301 if perma else 302
         self.options["__header__"]["Location"] = route
