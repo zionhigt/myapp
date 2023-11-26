@@ -7,7 +7,6 @@ def parser(body, options):
         content_type = options.get("Content-Type")
         if content_type is not None:
             boundary = "--" + content_type[1].replace("boundary=", "")
-            bound_id = boundary.replace("-", '')
             name, value = "", ""
             body = b"\r\n".join(body).split(b"\r\n")
             bufferize = False
