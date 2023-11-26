@@ -125,24 +125,31 @@ class Server:
                     break
         return controller
     
-    def listen(self):
+    def listen(self, timeout=1):
         self._server.listen()
         print(f"Listening on {self.host}:{self.port}")
 
         while True:
             try:
                 client, origin = self._server.accept()
+                # chunk's timeout
+                client.settimeout(timeout)
                 max_chunk = self.max_size_request
                 buffer_size = 2048
                 chunk = b''
                 while True:
-                    _chunk = client.recv(buffer_size)
-                    if len(chunk) < max_chunk:
-                        chunk += _chunk
-                        if len(_chunk) < buffer_size:
+                    try:
+                        _chunk = client.recv(buffer_size)
+                        if not _chunk:
                             break
-                    else:
-                        break
+                        if len(chunk) < max_chunk:
+                            chunk += _chunk
+                        else:
+                            break
+                    except OSError as e:
+                        if e.__str__() == "timed out":
+                            break
+                        
                 if len(chunk):
                     response = Response(client)
                     request = Request(chunk)
