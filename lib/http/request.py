@@ -23,9 +23,9 @@ class Request:
 
     @staticmethod
     def parse_chunk(chunk):
-        decomposed = chunk.decode().split("\r\n\r\n")
+        decomposed = chunk.split(b"\r\n\r\n")
         body = None
-        headers = decomposed[0]
+        headers = decomposed[0].decode("utf-8")
         if len(decomposed) > 1:
             body = decomposed[1:]
         items = headers.split()
