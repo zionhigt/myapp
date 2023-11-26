@@ -88,6 +88,7 @@ class Server:
             "DELETE": [],
             "PATCH": [],
             "UPDATE": [],
+            "USE": [],
         }
 
         self.init_api(app.api)
@@ -128,10 +129,11 @@ class Server:
     def listen(self, timeout=1):
         self._server.listen()
         print(f"Listening on {self.host}:{self.port}")
-
+        client = False
         while True:
             try:
-                client, origin = self._server.accept()
+                if not client or client._closed:
+                    client, origin = self._server.accept()
                 # chunk's timeout
                 client.settimeout(timeout)
                 max_chunk = self.max_size_request
@@ -161,6 +163,8 @@ class Server:
                             response.not_found()
                     else:
                         response.bad_request()
+                
+                client.close()
 
 
             except OSError:
