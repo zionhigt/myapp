@@ -128,3 +128,8 @@ class Response:
             
         except FileNotFoundError:
             return self.not_found()
+    
+    def redirect(self, route, perma=True):
+        status_code = 301 if perma else 302
+        self.options["__header__"]["Location"] = route
+        return self.with_status(status_code).sendall(b"")
