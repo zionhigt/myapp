@@ -55,6 +55,7 @@ class Node:
             if child is not None:
                 return child.search(list_path[1:])
         return self
+    
 
 class Controller:
 
