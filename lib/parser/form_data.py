@@ -22,7 +22,7 @@ def parser(body, options):
                         name = name or "file"
                         value = {
                             "filename": filename,
-                            "mime": mime,
+                            "mimetype": mime,
                             "data": b"\r\n".join(value)
 
                         }
