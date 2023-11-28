@@ -5,56 +5,14 @@ from lib.http.response import Response
 from lib.http.request import Request
 Request = Request.get_instance
 
+from lib.http.controller import Controller
+Controller = Controller.get_instance
+
 from lib.api import Api
+
 from app import app
 
 import config
-
-
-class Controller:
-        
-    def __init__(self, route, function, options={}):
-        self.route, self.params = self.prepare_route(route)
-        self.function = function
-        self.type = "router"
-        if options.get("type") is not None:
-            self.type = options.get("type")
-        
-        self.has_alias = False
-        if options.get("has_alias") is not None:
-            self.type = options.get("has_alias")
-    
-    def match_params(self, params, self_params=None):
-        if self_params is None:
-            self_params = self.params
-
-        if not isinstance(self_params, list):
-            if getattr(self_params, "items", False):
-                for route, self_param in self_params.items():
-                    if self.match_params(params, self_param):
-                        return self_param
-                return False 
-            
-        if not len(params) or len(params) != len(self_params):
-            return False
-        for i, self_param in enumerate(self_params):
-            compare = params[i]
-            if self_param[1][0] == ":":
-                self_param = compare
-            if self_param != compare:
-                return False
-        return self_params
-        
-    
-    def prepare_route(self, route):
-        if isinstance(route, list):
-            result = {}
-            for r in route:
-                result[r] = self.prepare_route(r)[1]
-            return route, result
-        
-        splited_url = list(enumerate(["/" if not i else i for i in route.split("/")]))
-        return route, splited_url
 
 
 class Server:
@@ -80,6 +38,7 @@ class Server:
         self._max_size_request = getattr(config, "max_size_request", None)
         self._server = socket(AF_INET, SOCK_STREAM)
         self._server.bind((self.host, self.port))
+        self.ctrl = Controller()
         self._controllers = {
             "GET": [],
             "POST": [],
@@ -100,9 +59,11 @@ class Server:
             return self._max_size_request
         return 20480000
     
-    def _subcribe_controller(self, verb, route, controller):
-        if self._controllers.get(verb.upper()) is not None:
-            self._controllers[verb.upper()].append(Controller(route, controller))
+    def _subcribe_controller(self, verb, routes, controller):
+        if not isinstance(routes, list):
+            routes = [routes]
+        for route in routes:
+            self.ctrl.append_children(route, verb, controller)
 
     def init_api(self, api):
         for ctrl in api.controllers:
@@ -110,20 +71,12 @@ class Server:
 
     def dispatch(self, request):
         controller = None
-        controllers = self._controllers.get(request.verb.upper())
-        if controllers is not None:
-            for ctrl in controllers:
-                match_params = ctrl.match_params(request._params)
-                if match_params:
-                    if isinstance(match_params, list):
-                        def bind_params(req, res):
-                            req.bind_params(match_params)
-                            return ctrl.function(req, res)
-                        
-                        controller = bind_params
-                    else:
-                        controller = ctrl.function
-                    break
+        node = self.ctrl.get_node(request.route)
+        if node is not None:
+            if node.value is not None and node.value.get(request.verb) is not None:
+                request.bind_params(list(enumerate(node.params)))
+                return node.value[request.verb]
+        
         return controller
     
     def listen(self, timeout=1):
@@ -158,6 +111,9 @@ class Server:
                     if request is not None:
                         controller = self.dispatch(request)
                         if controller is not None:
+                            if isinstance(controller, list):
+                                controller = controller[0]
+                            
                             controller(req=request, res=response)
                         else:
                             response.not_found()
