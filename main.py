@@ -39,19 +39,8 @@ class Server:
         self._server = socket(AF_INET, SOCK_STREAM)
         self._server.bind((self.host, self.port))
         self.ctrl = Controller()
-        self._controllers = {
-            "GET": [],
-            "POST": [],
-            "OPTIONS": [],
-            "HEADERS": [],
-            "DELETE": [],
-            "PATCH": [],
-            "UPDATE": [],
-            "USE": [],
-        }
-
-        self.init_api(app.api)
-        self._controllers
+        if getattr(app, "api") is not None:
+            self.init_api(app.api)
     
     @property
     def max_size_request(self):
@@ -104,6 +93,7 @@ class Server:
                     except OSError as e:
                         if e.__str__() == "timed out":
                             break
+                        raise e
                         
                 if len(chunk):
                     response = Response(client)
